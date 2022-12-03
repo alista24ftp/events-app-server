@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { Op } from "sequelize";
 import { EventService } from "../../lib/fetch/event-service";
 import { EventRequest } from "../../lib/requests/event-request";
-import { EventModel } from "../../models/event";
+import { EventModel, getEvents } from "../../models/event";
 
 const router = express.Router();
 
@@ -16,39 +16,7 @@ router.get("/", async (req: Request, res: Response) => {
     // An alternative is to fetch events from external open511 API directly
     // const events = await eventService.getEvents(eventQuery.toQueryStr());
     try {
-        const whereParam: any = {};
-        let emptyWhere = true;
-
-        if (eventQuery.eventType) {
-            whereParam.event_type = { [Op.eq]: eventQuery.eventType };
-            emptyWhere = false;
-        }
-        if (eventQuery.severity) {
-            whereParam.severity = { [Op.eq]: eventQuery.severity };
-            emptyWhere = false;
-        }
-        if (eventQuery.area) {
-            whereParam.areas = {
-                [Op.contains]: [{ id: eventQuery.area }]
-            };
-            emptyWhere = false;
-        }
-        if (eventQuery.startDate) {
-            whereParam.created = {
-                [Op.gte]: new Date(eventQuery.startDate),
-            };
-            emptyWhere = false;
-        }
-        
-        const opts: any = {
-            limit: eventQuery.limit,
-            offset: eventQuery.offset,
-        };
-        if (!emptyWhere) {
-            opts.where = whereParam;
-        }
-
-        const events = await EventModel.findAll(opts);
+        const events = await getEvents(eventQuery);
 
         res.send(events);
     } catch (e) {

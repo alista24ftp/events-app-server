@@ -1,4 +1,4 @@
-import { DataTypes, Model } from "sequelize";
+import { DataTypes, Model, Op } from "sequelize";
 import { sequelize } from "../lib/database";
 
 import { Area, toArea } from "./area";
@@ -9,6 +9,7 @@ import { isRoad, Road } from "./road";
 import { RecurringSchedule, toRecurringSchedule } from "./recurring-schedule";
 import { Severity, toSeverity } from "./severity";
 import _ from "lodash";
+import { EventRequest } from "../lib/requests/event-request";
 
 interface Event {
     jurisdiction_url: string,
@@ -190,4 +191,45 @@ EventModel.init({
     modelName: "Event"
 });
 
-export { Event, EventModel };
+const getEvents = async (eventReq: EventRequest) => {
+    try {
+        const whereParam: any = {};
+        let emptyWhere = true;
+
+        if (eventReq.eventType) {
+            whereParam.event_type = { [Op.eq]: eventReq.eventType };
+            emptyWhere = false;
+        }
+        if (eventReq.severity) {
+            whereParam.severity = { [Op.eq]: eventReq.severity };
+            emptyWhere = false;
+        }
+        if (eventReq.area) {
+            whereParam.areas = {
+                [Op.contains]: [{ id: eventReq.area }]
+            };
+            emptyWhere = false;
+        }
+        if (eventReq.startDate) {
+            whereParam.created = {
+                [Op.gte]: new Date(eventReq.startDate),
+            };
+            emptyWhere = false;
+        }
+        
+        const opts: any = {
+            limit: eventReq.limit,
+            offset: eventReq.offset,
+        };
+        if (!emptyWhere) {
+            opts.where = whereParam;
+        }
+
+        const events = await EventModel.findAll(opts);
+        return events;
+    } catch (e) {
+        throw e;
+    }
+};
+
+export { Event, EventModel, getEvents };
